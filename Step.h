@@ -42,3 +42,25 @@ public:
 
     std::chrono::milliseconds m_period;
 };
+
+class MultiStep : public Step {
+public:
+    rxcpp::observable<Status> performBy(Robot&) const override;
+    
+    std::vector<std::shared_ptr<Step>> m_innerSteps;
+};
+
+class SequenceStep : public Step {
+public:
+    rxcpp::observable<Status> performBy(Robot&) const override;
+
+    std::vector<std::shared_ptr<Step>> m_innerSteps;
+};
+
+class LoopStep : public Step {
+public:
+    rxcpp::observable<Status> performBy(Robot&) const override;
+
+    std::shared_ptr<SequenceStep> m_innerStep;
+    int64_t m_loopCount{};
+};

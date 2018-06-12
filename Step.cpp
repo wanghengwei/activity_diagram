@@ -30,3 +30,27 @@ rxcpp::observable<Status> SleepStep::performBy(Robot&) const {
     BOOST_LOG_TRIVIAL(debug) << "Sleeping for " << m_period.count() << " milliseconds";
     return rxcpp::observable<>::just(Status{}).delay(m_period);
 }
+
+rxcpp::observable<Status> MultiStep::performBy(Robot& robot) const {
+    rxcpp::observable<>::iterate(m_innerSteps).map([&robot](auto step) {
+        return step->performBy(robot);
+    }).amb();
+}
+
+rxcpp::observable<Status> SequenceStep::performBy(Robot& robot) const {
+    rxcpp::observable<>::iterate(m_innerSteps).map([&robot](auto step) {
+        return step->performBy(robot);
+    }).concat();
+}
+
+rxcpp::observable<Status> LoopStep::performBy(Robot& robot) const {
+    if (m_loopCount == 0) {
+        return rxcpp::observable<>::empty<Status>();
+    } else {
+        auto o = rxcpp::observable<>::just(m_innerStep);
+        auto steps = m_loopCount < 0 ? rxcpp::observable<>::just(m_innerStep).repeat().as_dynamic() : rxcpp::observable<>::just(m_innerStep).repeat(m_loopCount).as_dynamic();
+        return steps.flat_map([&robot](auto step) {
+            return step->performBy(robot);
+        });
+    }
+}

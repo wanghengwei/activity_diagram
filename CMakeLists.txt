@@ -42,3 +42,18 @@ add_executable(${CMAKE_PROJECT_NAME} main.cpp Robot.cpp Step.cpp Blueprint.cpp)
 target_compile_definitions(demo-rxcpp PUBLIC BOOST_ALL_DYN_LINK)
 target_include_directories(demo-rxcpp PRIVATE ${rxcpp_SOURCE_DIR}/Rx/v2/src)
 target_link_libraries(${CMAKE_PROJECT_NAME} ${Boost_LIBRARIES} pthread ${FRUIT_LIB} fmt)
+
+
+FetchContent_Declare(googletest
+    URL https://github.com/google/googletest/archive/release-1.8.0.zip
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/.deps/googletest
+)
+FetchContent_GetProperties(googletest)
+if(NOT googletest_POPULATED)
+    FetchContent_Populate(googletest)
+    # include_directories(${googletest_SOURCE_DIR}/googletest/include)
+    add_subdirectory(${googletest_SOURCE_DIR})
+endif()
+add_executable(tests test/test_step.cpp)
+target_link_libraries(tests gtest_main)
+# target_include_directories(tests PRIVATE ${googletest_SOURCE_DIR}/googletest/include)
