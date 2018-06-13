@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.11)
 
-project(demo-rxcpp)
+project(demo-rxcpp LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD_REQUIRED 17)
 
 include(FetchContent)
 include(ExternalProject)
@@ -38,10 +40,10 @@ include_directories(${CMAKE_SOURCE_DIR}/.stage/include)
 
 find_library(FRUIT_LIB fruit)
 
-add_executable(${CMAKE_PROJECT_NAME} main.cpp Robot.cpp Step.cpp Blueprint.cpp)
-target_compile_definitions(demo-rxcpp PUBLIC BOOST_ALL_DYN_LINK)
-target_include_directories(demo-rxcpp PRIVATE ${rxcpp_SOURCE_DIR}/Rx/v2/src)
-target_link_libraries(${CMAKE_PROJECT_NAME} ${Boost_LIBRARIES} pthread ${FRUIT_LIB} fmt)
+#add_executable(${CMAKE_PROJECT_NAME} main.cpp Robot.cpp Step.cpp Blueprint.cpp)
+#target_compile_definitions(demo-rxcpp PUBLIC BOOST_ALL_DYN_LINK)
+#target_include_directories(demo-rxcpp PRIVATE ${rxcpp_SOURCE_DIR}/Rx/v2/src)
+#target_link_libraries(${CMAKE_PROJECT_NAME} ${Boost_LIBRARIES} pthread ${FRUIT_LIB} fmt)
 
 
 FetchContent_Declare(googletest
@@ -54,6 +56,9 @@ if(NOT googletest_POPULATED)
     # include_directories(${googletest_SOURCE_DIR}/googletest/include)
     add_subdirectory(${googletest_SOURCE_DIR})
 endif()
-add_executable(tests test/test_step.cpp)
-target_link_libraries(tests gtest_main)
+#add_executable(tests test/test_step.cpp)
+#target_link_libraries(tests gtest_main)
 # target_include_directories(tests PRIVATE ${googletest_SOURCE_DIR}/googletest/include)
+
+add_subdirectory(src/lib)
+add_subdirectory(src/test)
