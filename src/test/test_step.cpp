@@ -120,3 +120,35 @@ TEST(BlueprintTest, LoopStep) {
 
     ASSERT_EQ(n, 6);
 }
+
+TEST(BlueprintTest, Goto) {
+    Tester tester;
+
+    auto s1 = std::make_shared<EmptyActionStep<bool>>(true);
+    auto s2 = std::make_shared<EmptyActionStep<bool>>(false);
+    auto s3 = std::make_shared<EmptyActionStep<bool>>(false);
+
+    auto sd = std::make_shared<StatusDispatcher<bool>>();
+    sd->addRule([](bool b) {
+        return !b;
+    }, s1.get());
+
+    s1->setNext(s2);
+    s2->setNext(sd);
+    sd->setDefaultNext(s3);
+
+    auto entry = std::make_shared<DirectDispatcher<bool>>();
+    entry->setNext(s1);
+
+    CompositeActionStep<bool> step;
+    step.setEntry(entry);
+
+    auto statusSeq = step.performBy(tester);
+
+    // int n = 0;
+    statusSeq.take(3).last().as_blocking().subscribe([](bool b) {
+        ASSERT_TRUE(b);
+    });
+
+    // ASSERT_EQ(n, 3);
+}

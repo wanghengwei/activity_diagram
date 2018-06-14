@@ -10,13 +10,13 @@ public:
         return performBy(p, step);
     }
 
-    rxcpp::observable<Status> performBy(Principal &p, Step<Status>* step) const {
+    static rxcpp::observable<Status> performBy(Principal &p, Step<Status>* step) {
         if (!step) {
             return rxcpp::observable<>::empty<Status>();
         }
 
         auto s1 = step->performBy(p);
-        auto s2 = s1.last().flat_map([this, &p, step](const Status& st) {
+        auto s2 = s1.take_last(1).flat_map([&p, step](const Status& st) {
             auto n = step->getNext(st);
             return performBy(p, n);
         });

@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.11)
 
 project(demo-rxcpp LANGUAGES CXX)
 
+enable_testing()
+
 set(CMAKE_CXX_STANDARD_REQUIRED 17)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 include(FetchContent)
 include(ExternalProject)
@@ -10,7 +13,8 @@ include(ExternalProject)
 find_package(Boost COMPONENTS log)
 
 FetchContent_Declare(rxcpp
-    URL https://github.com/ReactiveX/RxCpp/archive/4.1.0.zip
+    # URL https://github.com/ReactiveX/RxCpp/archive/4.1.0.zip
+    URL http://downloads.tac.com/dev/libs/RxCpp/4.1.0.zip
     URL_MD5 3af94f312985f82f8c1067e26f65bc5f
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/.deps/rxcpp
 )
@@ -20,7 +24,7 @@ if(NOT rxcpp_POPULATED)
 endif()
 
 FetchContent_Declare(fmt
-    URL https://github.com/fmtlib/fmt/releases/download/5.0.0/fmt-5.0.0.zip
+    URL http://downloads.tac.com/dev/libs/fmt/fmt-5.0.0.zip
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/.deps/fmt
 )
 FetchContent_GetProperties(fmt)
@@ -30,7 +34,7 @@ if(NOT fmt_POPULATED)
 endif()
 
 ExternalProject_Add(fruit
-    URL https://github.com/google/fruit/archive/v3.1.1.zip
+    URL http://downloads.tac.com/dev/libs/fruit/v3.1.1.zip
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/.deps/fruit
     INSTALL_DIR ${CMAKE_SOURCE_DIR}/.stage
     CMAKE_ARGS -DCMAKE_BUILD_TYPE=$<CONFIG> -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DBUILD_SHARED_LIBS=OFF
@@ -47,7 +51,7 @@ find_library(FRUIT_LIB fruit)
 
 
 FetchContent_Declare(googletest
-    URL https://github.com/google/googletest/archive/release-1.8.0.zip
+    URL http://downloads.tac.com/dev/libs/googletest/release-1.8.0.zip
     SOURCE_DIR ${CMAKE_SOURCE_DIR}/.deps/googletest
 )
 FetchContent_GetProperties(googletest)
