@@ -52,8 +52,8 @@ TEST(BlueprintTest, CompisiteStepWithError) {
     Tester tester;
 
     auto s1 = std::make_shared<EmptyActionStep<bool>>(true);
-    auto s2 = std::make_shared<EmptyActionStep<bool>>(true);
     // The second action will FAILED!!
+    auto s2 = std::make_shared<EmptyActionStep<bool>>(false);
     auto s3 = std::make_shared<EmptyActionStep<bool>>(false);
 
     auto d2to3 = std::make_shared<StatusDispatcher<bool>>();
