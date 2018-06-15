@@ -1,13 +1,11 @@
-add_library(blueprint
-#    Blueprint.cpp
-#    Blueprint.h
-    step.h
+add_library(activity_diagram
+    node.h
     principal.h
     principal.cpp
-    statusdispatcher.h
-    loopactionstep.h
-    composite_action_step.h
+    status_decision.h
+    loop_action.h
+    nested_activity_diagram.h
     )
-target_include_directories(blueprint PUBLIC ${rxcpp_SOURCE_DIR}/Rx/v2/src INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(blueprint ${Boost_LIBRARIES})
-target_compile_definitions(blueprint PUBLIC BOOST_ALL_DYN_LINK)
+target_include_directories(activity_diagram PUBLIC ${rxcpp_SOURCE_DIR}/Rx/v2/src INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(activity_diagram ${Boost_LIBRARIES})
+target_compile_definitions(activity_diagram PUBLIC BOOST_ALL_DYN_LINK)

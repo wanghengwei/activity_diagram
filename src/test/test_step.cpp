@@ -224,7 +224,7 @@ TEST(ActivityDiagramTest, GotoOuterNodeFromLoop) {
     auto statusSeq = g.performBy(tester);
 
     statusSeq.take(8).map([](int x) {
-        BOOST_LOG_TRIVIAL(debug) << "item: " << x;
+        // BOOST_LOG_TRIVIAL(debug) << "item: " << x;
         return x;
     }).sequence_equal(rxcpp::observable<>::from(3, 4, 0, 1, 4, 0, 1, 4)).as_blocking().subscribe([](bool b) {
         ASSERT_TRUE(b);
