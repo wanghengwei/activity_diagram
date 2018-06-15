@@ -1,5 +1,9 @@
 .build-*
-.deps
-.stage
+_deps
+_stage
 .vscode
 *.user
+
+GTAGS
+GRTAGS
+GPATH
