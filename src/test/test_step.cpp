@@ -30,13 +30,13 @@ using namespace std::literals::chrono_literals;
 class Tester : public Principal {};
 
 TEST(BlueprintTest, EmptyAction) {
-    EmptyActionStep<bool> step{true};
+    EmptyAction<int> step;
     Tester tester;
 
-    auto [_, r] = step.performBy(tester);
+    auto r = step.performBy(tester);
     int n = 0;
-    r.as_blocking().subscribe([&n](bool st) {
-        ASSERT_TRUE(st);
+    r.as_blocking().subscribe([&n](int st) {
+        ASSERT_EQ(st, 0);
         ++n;
     });
     ASSERT_EQ(n, 1);
@@ -45,9 +45,9 @@ TEST(BlueprintTest, EmptyAction) {
 TEST(BlueprintTest, CompisiteStep) {
     Tester tester;
 
-    auto s1 = std::make_shared<EmptyActionStep<bool>>(true);
-    auto s2 = std::make_shared<EmptyActionStep<bool>>(true);
-    auto s3 = std::make_shared<EmptyActionStep<bool>>(true);
+    auto s1 = std::make_shared<EmptyAction<bool>>(true);
+    auto s2 = std::make_shared<EmptyAction<bool>>(true);
+    auto s3 = std::make_shared<EmptyAction<bool>>(true);
 
     s1->setNext(s2);
     s2->setNext(s3);
@@ -59,7 +59,7 @@ TEST(BlueprintTest, CompisiteStep) {
     step.setEntry(entry);
 
     BOOST_LOG_TRIVIAL(debug) << "start performing";
-    auto [_, statusSeq] = step.performBy(tester);
+    auto statusSeq = step.performBy(tester);
     BOOST_LOG_TRIVIAL(debug) << "end performing";
 
     int n = 0;
@@ -80,10 +80,10 @@ TEST(BlueprintTest, CompisiteStep) {
 TEST(BlueprintTest, CompisiteStepWithError) {
     Tester tester;
 
-    auto s1 = std::make_shared<EmptyActionStep<int>>(0);
+    auto s1 = std::make_shared<EmptyAction<int>>(0);
     // The second action will FAILED!!
-    auto s2 = std::make_shared<EmptyActionStep<int>>(1);
-    auto s3 = std::make_shared<EmptyActionStep<int>>(1);
+    auto s2 = std::make_shared<EmptyAction<int>>(1);
+    auto s3 = std::make_shared<EmptyAction<int>>(1);
 
     auto d2to3 = std::make_shared<StatusDispatcher<int>>();
     d2to3->setFatalCondition([](int e) {
@@ -104,7 +104,7 @@ TEST(BlueprintTest, CompisiteStepWithError) {
 
     int n = 0;
     bool hasError = false;
-    std::get<1>(rez).as_blocking().subscribe([&n](int b) {
+    rez.as_blocking().subscribe([&n](int b) {
         BOOST_LOG_TRIVIAL(info) << "subscribed: " << b;
         // ASSERT_EQ(b, 0);
         ++n;
@@ -123,9 +123,9 @@ TEST(BlueprintTest, CompisiteStepWithError) {
 TEST(BlueprintTest, LoopStep) {
     Tester tester;
 
-    auto s1 = std::make_shared<EmptyActionStep<int>>();
-    auto s2 = std::make_shared<EmptyActionStep<int>>();
-    auto s3 = std::make_shared<EmptyActionStep<int>>();
+    auto s1 = std::make_shared<EmptyAction<int>>();
+    auto s2 = std::make_shared<EmptyAction<int>>();
+    auto s3 = std::make_shared<EmptyAction<int>>();
 
     s1->setNext(s2);
     s2->setNext(s3);
@@ -140,7 +140,7 @@ TEST(BlueprintTest, LoopStep) {
     loop.setInnerAction(innerStep);
     loop.setLoopCount(2);
 
-    auto [_, statusSeq] = loop.performBy(tester);
+    auto statusSeq = loop.performBy(tester);
 
     int n = 0;
     statusSeq.all([&n](bool s) {
@@ -153,34 +153,38 @@ TEST(BlueprintTest, LoopStep) {
     ASSERT_EQ(n, 6);
 }
 
-// TEST(BlueprintTest, Goto) {
-//     Tester tester;
+TEST(BlueprintTest, Goto) {
+    Tester tester;
 
-//     auto s1 = std::make_shared<EmptyActionStep<bool>>(true);
-//     auto s2 = std::make_shared<EmptyActionStep<bool>>(false);
-//     auto s3 = std::make_shared<EmptyActionStep<bool>>(false);
+    auto s1 = std::make_shared<EmptyAction<int>>(0);
+    auto s2 = std::make_shared<EmptyAction<int>>(1);
+    auto s3 = std::make_shared<EmptyAction<int>>(2);
 
-//     auto sd = std::make_shared<StatusDispatcher<bool>>();
-//     sd->addRule([](bool b) {
-//         return !b;
-//     }, s1.get());
+    auto sd = std::make_shared<StatusDispatcher<int>>();
+    sd->addRule([](int b) {
+        return b == 1;
+    }, s1.get());
 
-//     s1->setNext(s2);
-//     s2->setNext(sd);
-//     sd->setDefaultNext(s3);
+    s1->setNext(s2);
+    s2->setNext(sd);
+    sd->setDefaultNext(s3);
 
-//     auto entry = std::make_shared<DirectDispatcher<bool>>();
-//     entry->setNext(s1);
+    auto entry = std::make_shared<DirectDispatcher<int>>();
+    entry->setNext(s1);
 
-//     CompositeActionStep<bool> step;
-//     step.setEntry(entry);
+    CompositeActionStep<int> step;
+    step.setEntry(entry);
 
-//     auto statusSeq = step.performBy(tester);
+    auto statusSeq = step.performBy(tester);
 
-//     // int n = 0;
-//     statusSeq.take(3).last().as_blocking().subscribe([](bool b) {
-//         ASSERT_TRUE(b);
-//     });
+    // int n = 0;
+    std::vector<int> v;
+    statusSeq.take(4).as_blocking().subscribe([&](int r) {
+        v.push_back(r);
+    });
 
-//     // ASSERT_EQ(n, 3);
-// }
+    std::vector<int> expected{0, 1, 0, 1};
+    ASSERT_EQ(v, expected);
+
+    // ASSERT_EQ(n, 3);
+}

@@ -7,22 +7,24 @@ class Step {
 public:
     virtual ~Step() {}
 
-    virtual std::tuple<rxcpp::observable<Step<Status>*>, rxcpp::observable<Status>> performBy(Principal&, const Status& status) const = 0;
+    virtual rxcpp::observable<Status> performBy(Principal&) const = 0;
+
+    virtual Step<Status>* getNext(const Status& status) const = 0;
 };
 
 template<typename Status>
 class Dispatcher : public Step<Status> {
 public:
-
+    rxcpp::observable<Status> performBy(Principal&) const override {
+        return rxcpp::observable<>::empty<Status>();
+    }
 };
 
 template<typename Status>
-class ActionStep : public Step<Status> {
+class Action : public Step<Status> {
 public:
 
-    virtual std::tuple<rxcpp::observable<Step<Status>*>, rxcpp::observable<Status>> performBy(Principal&, const Status& status = Status{}) const = 0;
-
-    Step<Status>* getNext() const {
+    Step<Status>* getNext(const Status& status) const override {
         return m_next.get();
     }
 

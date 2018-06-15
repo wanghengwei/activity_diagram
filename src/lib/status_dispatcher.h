@@ -7,22 +7,22 @@ template<typename Status>
 class StatusDispatcher : public Dispatcher<Status>
 {
 public:
-    std::tuple<rxcpp::observable<Step<Status>*>, rxcpp::observable<Status>> performBy(Principal&, const Status& status) const override {
+    Step<Status>* getNext(const Status& status) const override {
         BOOST_LOG_TRIVIAL(debug) << "dispatching by status: " << status;
         // 严重错误直接中断序列
         if (m_fatalCond && m_fatalCond(status)) {
-            return std::make_tuple(rxcpp::observable<>::empty<Step<Status>*>(), rxcpp::observable<>::error<Status>(std::runtime_error{"FatalError"}));
+            throw std::runtime_error{"FatalError"};
         }
 
         // 检查状态码，看看有没有合适的分支
         for (const auto& p : m_gotos) {
             if (p.first(status)) {
-                return std::make_tuple(rxcpp::observable<>::just(p.second), rxcpp::observable<>::empty<Status>());
+                return p.second;
             }
         }
 
         // 如果没有合适的goto，返回默认的下一个节点
-        return std::make_tuple(rxcpp::observable<>::just(m_defaultNext.get()), rxcpp::observable<>::empty<Status>());
+        return m_defaultNext.get();
     }
 
     template<typename Cond>

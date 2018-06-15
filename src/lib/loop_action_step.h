@@ -3,22 +3,19 @@
 // #include "action_step.h"
 
 template<typename Status>
-class LoopActionStep : public ActionStep<Status> {
+class LoopActionStep : public Action<Status> {
 public:
-    std::tuple<rxcpp::observable<Step<Status>*>, rxcpp::observable<Status>> performBy(Principal& p, const Status& = Status{}) const override {
+    rxcpp::observable<Status> performBy(Principal& p) const override {
         if (!m_innerStep) {
-            return std::make_tuple(rxcpp::observable<>::just<Step<Status>*>(getNext()), rxcpp::observable<>::empty<Status>());
+            return rxcpp::observable<>::empty<Status>();
         }
 
-        auto sts = rxcpp::observable<>::just(m_innerStep.get()).repeat(m_loopCount).flat_map([&p](ActionStep<Status>* step) {
-            auto [_, statuses] = step->performBy(p);
-            return statuses;
+        return rxcpp::observable<>::just(m_innerStep.get()).repeat(m_loopCount).flat_map([&p](Action<Status>* step) {
+            return step->performBy(p);
         });
-
-        return std::make_tuple(rxcpp::observable<>::just<Step<Status>*>(getNext()), sts);
     }
 
-    void setInnerAction(std::shared_ptr<ActionStep<Status>> inner) {
+    void setInnerAction(std::shared_ptr<Action<Status>> inner) {
         m_innerStep.swap(inner);
     }
 
@@ -26,8 +23,8 @@ public:
         m_loopCount = n;
     }
 
-    using ActionStep<Status>::getNext;
+    using Action<Status>::getNext;
 private:
-    std::shared_ptr<ActionStep<Status>> m_innerStep;
+    std::shared_ptr<Action<Status>> m_innerStep;
     int64_t m_loopCount{-1};
 };

@@ -4,15 +4,13 @@
 #include <boost/type_index.hpp>
 
 template<typename Status>
-class CompositeActionStep : public ActionStep<Status> {
+class CompositeActionStep : public Action<Status> {
 public:
 
-    std::tuple<rxcpp::observable<Step<Status>*>, rxcpp::observable<Status>> performBy(Principal& p, const Status& status = Status{}) const override {
+    rxcpp::observable<Status> performBy(Principal& p) const override {
         Step<Status>* entry = getEntry();
-        rxcpp::observable<Status> statuses = perform(p, entry, status);
-        return std::make_tuple(rxcpp::observable<>::just<Step<Status>*>(ActionStep<Status>::getNext()), statuses);
+        return perform(p, entry, Status{});
     }
-
 
     Dispatcher<Status>* getEntry() const {
         return m_entry.get();
@@ -22,22 +20,21 @@ public:
         m_entry.swap(entry);
     }
 
+    using Action<Status>::getNext;
+
 private:
 
     static rxcpp::observable<Status> perform(Principal &p, Step<Status>* step, const Status& lastStatus) {
         if (!step) {
-            BOOST_LOG_TRIVIAL(debug) << "ending perform because step is null";
             return rxcpp::observable<>::empty<Status>().as_dynamic();
         }
-        BOOST_LOG_TRIVIAL(debug) << "performing, step=" << boost::typeindex::type_id_runtime(*step) << ", lastStatus=" << lastStatus;
 
-        auto [next, statusOfCurrent] = step->performBy(p, lastStatus);
+        auto statusOfCurrent = step->performBy(p);
 
-        BOOST_LOG_TRIVIAL(debug) << "performed for step " << boost::typeindex::type_id_runtime(*step);
-
-        auto leftStatuses = next.zip([&p](Step<Status>* nextStep, const Status& st) {
-            return perform(p, nextStep, st);
-        }, statusOfCurrent.take_last(1).default_if_empty(lastStatus)).merge();
+        auto leftStatuses = statusOfCurrent.take_last(1).default_if_empty(lastStatus).flat_map([step, &p](const Status& currentStatus) {
+            Step<Status>* nextStep = step->getNext(currentStatus);
+            return perform(p, nextStep, currentStatus);
+        });
 
         return statusOfCurrent.concat(leftStatuses);
     }

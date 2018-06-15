@@ -4,11 +4,7 @@
 template<typename Status>
 class DirectDispatcher : public Dispatcher<Status> {
 public:
-    std::tuple<rxcpp::observable<Step<Status>*>, rxcpp::observable<Status>> performBy(Principal&, const Status& status = Status{}) const override {
-        return std::make_tuple(rxcpp::observable<>::just<Step<Status>*>(m_next.get()), rxcpp::observable<>::empty<Status>());
-    }
-
-    Step<Status>* getNext(const Status&) const {
+    Step<Status>* getNext(const Status& status) const override {
         return m_next.get();
     }
 
