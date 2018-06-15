@@ -10,80 +10,80 @@
 
 using namespace std::literals::chrono_literals;
 
-// TEST(RxCpp, Subject) {
-//     BOOST_LOG_TRIVIAL(info) << "start test";
-
-//     rxcpp::subjects::subject<uint64_t> s;
-//     s.get_observable().start_with(uint64_t(1))
-//     // .observe_on(rxcpp::observe_on_event_loop())
-//     // .observe_on(rxcpp::observe_on_event_loop())
-//     .scan(uint64_t(1), [&s](uint64_t seed, uint64_t x) {
-//         s.get_subscriber().on_next(seed);
-//         return seed + x;
-//     }).subscribe([](auto x) {
-//         BOOST_LOG_TRIVIAL(info) << x;
-//     });
-
-//     std::this_thread::sleep_for(3s);
-// }
-
 class Tester : public Principal {};
 
-TEST(BlueprintTest, EmptyAction) {
-    EmptyAction<int> step;
+TEST(ActivityDiagramTest, EmptyAction) {
     Tester tester;
+
+    EmptyAction<int> step{2};
 
     auto r = step.performBy(tester);
-    int n = 0;
-    r.as_blocking().subscribe([&n](int st) {
-        ASSERT_EQ(st, 0);
-        ++n;
+    r.sequence_equal(rxcpp::observable<>::from(2)).as_blocking().subscribe([](bool b) {
+        ASSERT_TRUE(b);
     });
-    ASSERT_EQ(n, 1);
 }
 
-TEST(BlueprintTest, CompisiteStep) {
+/*
+
+ +---------------------------------------------+
+ |                                             |
+ |         +-----+      +-----+      +-----+   |
++++        |     |      |     |      |     |   |
+| +------> |  0  +----> |  0  +----> |  0  |   |
++++        |     |      |     |      |     |   |
+ |         +-----+      +-----+      +-----+   |
+ |                                             |
+ +---------------------------------------------+
+
+
+*/
+TEST(ActivityDiagramTest, SimpleNested) {
     Tester tester;
 
-    auto s1 = std::make_shared<EmptyAction<bool>>(true);
-    auto s2 = std::make_shared<EmptyAction<bool>>(true);
-    auto s3 = std::make_shared<EmptyAction<bool>>(true);
+    auto s1 = std::make_shared<EmptyAction<int>>(0);
+    auto s2 = std::make_shared<EmptyAction<int>>(0);
+    auto s3 = std::make_shared<EmptyAction<int>>(0);
 
     s1->setNext(s2);
     s2->setNext(s3);
 
-    auto entry = std::make_shared<DirectDecision<bool>>();
+    auto entry = std::make_shared<DirectDecision<int>>();
     entry->setNext(s1);
 
-    NestedActivityDiagram<bool> step;
+    NestedActivityDiagram<int> step;
     step.setEntry(entry);
 
-    BOOST_LOG_TRIVIAL(debug) << "start performing";
     auto statusSeq = step.performBy(tester);
-    BOOST_LOG_TRIVIAL(debug) << "end performing";
 
-    int n = 0;
-    statusSeq
-    .all([&n](bool s) {
-        BOOST_LOG_TRIVIAL(debug) << "status: " << s;
-        ++n;
-        return s;
-    })
-    .as_blocking().subscribe([](bool b) {
+    statusSeq.sequence_equal(rxcpp::observable<>::from(0, 0, 0)).as_blocking().subscribe([](bool b) {
         ASSERT_TRUE(b);
-        // BOOST_LOG_TRIVIAL(debug) << "subscribe: " << b;
     });
-
-    ASSERT_EQ(n, 3);
 }
 
-TEST(BlueprintTest, CompisiteStepWithError) {
+/*
+
+                              Error
+                                ^
+                                |
+                                |
+ +-----------------------------------------------+
+ |                              |                |
+ |      +------+   +------+     |     +------+   |
++++     |      |   |      |   +-+-+   |      |   |
+| +----->  0   +--->  1   +--->   +--->  2   |   |
++++     |      |   |      |   +---+   |      |   |
+ |      +------+   +------+           +------+   |
+ |                                               |
+ +-----------------------------------------------+
+
+*/
+TEST(ActivityDiagramTest, CompisiteStepWithError) {
     Tester tester;
 
     auto s1 = std::make_shared<EmptyAction<int>>(0);
     // The second action will FAILED!!
     auto s2 = std::make_shared<EmptyAction<int>>(1);
-    auto s3 = std::make_shared<EmptyAction<int>>(1);
+    auto s3 = std::make_shared<EmptyAction<int>>(2);
 
     auto d2to3 = std::make_shared<StatusDecision<int>>();
     d2to3->setFatalCondition([](int e) {
@@ -102,30 +102,25 @@ TEST(BlueprintTest, CompisiteStepWithError) {
 
     auto rez = step.performBy(tester);
 
-    int n = 0;
-    bool hasError = false;
-    rez.as_blocking().subscribe([&n](int b) {
-        BOOST_LOG_TRIVIAL(info) << "subscribed: " << b;
-        // ASSERT_EQ(b, 0);
-        ++n;
-    }, [&hasError](std::exception_ptr) {
-        hasError = true;
-        BOOST_LOG_TRIVIAL(info) << "has error!";
-    }, []() {
-        ASSERT_TRUE(false);
-        BOOST_LOG_TRIVIAL(info) << "completed";
+    rez.take(2).sequence_equal(rxcpp::observable<>::from(0, 1)).as_blocking().subscribe([](bool b) {
+        ASSERT_TRUE(b);
     });
 
-    ASSERT_EQ(n, 2);
-    ASSERT_TRUE(hasError);
+    rez.skip(2).as_blocking().subscribe([](auto) {
+        FAIL();
+    }, [](std::exception_ptr) {
+        SUCCEED();
+    }, []() {
+        FAIL();
+    });
 }
 
-TEST(BlueprintTest, LoopStep) {
+TEST(ActivityDiagramTest, LoopStep) {
     Tester tester;
 
-    auto s1 = std::make_shared<EmptyAction<int>>();
-    auto s2 = std::make_shared<EmptyAction<int>>();
-    auto s3 = std::make_shared<EmptyAction<int>>();
+    auto s1 = std::make_shared<EmptyAction<int>>(0);
+    auto s2 = std::make_shared<EmptyAction<int>>(1);
+    auto s3 = std::make_shared<EmptyAction<int>>(2);
 
     s1->setNext(s2);
     s2->setNext(s3);
@@ -142,18 +137,12 @@ TEST(BlueprintTest, LoopStep) {
 
     auto statusSeq = loop.performBy(tester);
 
-    int n = 0;
-    statusSeq.all([&n](bool s) {
-        ++n;
-        return !s;
-    }).as_blocking().subscribe([](bool b) {
+    statusSeq.sequence_equal(rxcpp::observable<>::from(0, 1, 2, 0, 1, 2)).as_blocking().subscribe([](bool b) {
         ASSERT_TRUE(b);
     });
-
-    ASSERT_EQ(n, 6);
 }
 
-TEST(BlueprintTest, Goto) {
+TEST(ActivityDiagramTest, Goto) {
     Tester tester;
 
     auto s1 = std::make_shared<EmptyAction<int>>(0);
@@ -187,4 +176,57 @@ TEST(BlueprintTest, Goto) {
     ASSERT_EQ(v, expected);
 
     // ASSERT_EQ(n, 3);
+}
+
+TEST(ActivityDiagramTest, GotoOuterNodeFromLoop) {
+    Tester tester;
+
+    auto node_A = std::make_shared<EmptyAction<int>>(3);
+    auto node_B = std::make_shared<EmptyAction<int>>(4);
+
+    //begin make loop action
+    auto s1 = std::make_shared<EmptyAction<int>>(0);
+    auto s2 = std::make_shared<EmptyAction<int>>(1);
+    auto d = std::make_shared<StatusDecision<int>>();
+    auto s3 = std::make_shared<EmptyAction<int>>(2);
+
+    s1->setNext(s2);
+    s2->setNext(d);
+    d->setDefaultNext(s3);
+
+    d->addRule([](int r) {
+        return r == 1;
+    }, node_B.get());
+
+    auto entry = std::make_shared<DirectDecision<int>>();
+    entry->setNext(s1);
+
+    auto innerStep = std::make_shared<NestedActivityDiagram<int>>();
+    innerStep->setEntry(entry);
+
+    auto loop = std::make_shared<LoopAction<int>>();
+    loop->setInnerAction(innerStep);
+    loop->setLoopCount(2);
+    //end make loop action
+
+    auto node_C = std::make_shared<EmptyAction<int>>(5);
+
+    node_A->setNext(node_B);
+    node_B->setNext(loop);
+    loop->setNext(node_C);
+
+    //start make a whole diagram
+    NestedActivityDiagram<int> g;
+    auto init = std::make_shared<DirectDecision<int>>();
+    init->setNext(node_A);
+    g.setEntry(init);
+
+    auto statusSeq = g.performBy(tester);
+
+    statusSeq.take(8).map([](int x) {
+        BOOST_LOG_TRIVIAL(debug) << "item: " << x;
+        return x;
+    }).sequence_equal(rxcpp::observable<>::from(3, 4, 0, 1, 4, 0, 1, 4)).as_blocking().subscribe([](bool b) {
+        ASSERT_TRUE(b);
+    });
 }

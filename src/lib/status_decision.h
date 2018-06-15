@@ -8,7 +8,6 @@ class StatusDecision : public Decision<Status>
 {
 public:
     Node<Status>* getNext(const Status& status) const override {
-        BOOST_LOG_TRIVIAL(debug) << "dispatching by status: " << status;
         // 严重错误直接中断序列
         if (m_fatalCond && m_fatalCond(status)) {
             throw std::runtime_error{"FatalError"};
