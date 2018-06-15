@@ -24,9 +24,6 @@ public:
 
 private:
 
-    // steps: The next step to be performed
-    // currentStatus: current status which used to be passed to performBy
-    // return: all statues of the next step and all remained steps
     static rxcpp::observable<Status> perform(Principal &p, Step<Status>* step, const Status& lastStatus) {
         if (!step) {
             BOOST_LOG_TRIVIAL(debug) << "ending perform because step is null";
@@ -43,30 +40,8 @@ private:
         }, statusOfCurrent.take_last(1).default_if_empty(lastStatus)).merge();
 
         return statusOfCurrent.concat(leftStatuses);
-
-        // rxcpp::observable<Status> allStatusesAfterNext = nextStep.flat_map([&p, currentStatus](Step<Status>* step) {
-        //     // perform next step:
-        //     BOOST_LOG_TRIVIAL(debug) << "start zip, step is " << step << ", last status is " << currentStatus;
-        //     if (!step) {
-        //         BOOST_LOG_TRIVIAL(debug) << "step is null, no more statuses";
-        //         return rxcpp::observable<>::empty<Status>().as_dynamic();
-        //     }
-        //     auto [nextOfNext, statusOfNext] = step->performBy(p, currentStatus);
-
-        //     // 递归调用本函数
-        //     auto allStatusesAfterNext = statusOfNext.default_if_empty(currentStatus).last().flat_map([&p, nextOfNext](const Status& st) {
-        //         // get all statuses after next step
-        //         return perform(p, nextOfNext, st);
-        //     });
-
-        //     return allStatusesAfterNext;
-        // });
-
-        // BOOST_LOG_TRIVIAL(debug) << "perform return";
-        // return rxcpp::observable<>::just<Status>(currentStatus).concat(allStatusesAfterNext);
     }
 
 private:
     std::shared_ptr<Dispatcher<Status>> m_entry;
-    // rxcpp::subjects::subject<Step<Status>*> m_stepSeq;
 };
