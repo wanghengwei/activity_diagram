@@ -1,22 +1,22 @@
 #pragma once
-#include "step.h"
+#include "node.h"
 #include <boost/log/trivial.hpp>
 #include <boost/type_index.hpp>
 
 template<typename Status>
-class CompositeActionStep : public Action<Status> {
+class NestedActivityDiagram : public Action<Status> {
 public:
 
     rxcpp::observable<Status> performBy(Principal& p) const override {
-        Step<Status>* entry = getEntry();
+        Node<Status>* entry = getEntry();
         return perform(p, entry, Status{});
     }
 
-    Dispatcher<Status>* getEntry() const {
+    Decision<Status>* getEntry() const {
         return m_entry.get();
     }
 
-    void setEntry(std::shared_ptr<Dispatcher<Status>> entry) {
+    void setEntry(std::shared_ptr<Decision<Status>> entry) {
         m_entry.swap(entry);
     }
 
@@ -24,7 +24,7 @@ public:
 
 private:
 
-    static rxcpp::observable<Status> perform(Principal &p, Step<Status>* step, const Status& lastStatus) {
+    static rxcpp::observable<Status> perform(Principal &p, Node<Status>* step, const Status& lastStatus) {
         if (!step) {
             return rxcpp::observable<>::empty<Status>().as_dynamic();
         }
@@ -32,7 +32,7 @@ private:
         auto statusOfCurrent = step->performBy(p);
 
         auto leftStatuses = statusOfCurrent.take_last(1).default_if_empty(lastStatus).flat_map([step, &p](const Status& currentStatus) {
-            Step<Status>* nextStep = step->getNext(currentStatus);
+            Node<Status>* nextStep = step->getNext(currentStatus);
             return perform(p, nextStep, currentStatus);
         });
 
@@ -40,5 +40,5 @@ private:
     }
 
 private:
-    std::shared_ptr<Dispatcher<Status>> m_entry;
+    std::shared_ptr<Decision<Status>> m_entry;
 };

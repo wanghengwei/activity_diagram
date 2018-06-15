@@ -1,13 +1,13 @@
 #pragma once
-#include "step.h"
+#include "node.h"
 #include <functional>
 #include <boost/log/trivial.hpp>
 
 template<typename Status>
-class StatusDispatcher : public Dispatcher<Status>
+class StatusDecision : public Decision<Status>
 {
 public:
-    Step<Status>* getNext(const Status& status) const override {
+    Node<Status>* getNext(const Status& status) const override {
         BOOST_LOG_TRIVIAL(debug) << "dispatching by status: " << status;
         // 严重错误直接中断序列
         if (m_fatalCond && m_fatalCond(status)) {
@@ -30,18 +30,18 @@ public:
         m_fatalCond = cond;
     }
 
-    void setDefaultNext(std::shared_ptr<Step<Status>> n) {
+    void setDefaultNext(std::shared_ptr<Node<Status>> n) {
         m_defaultNext.swap(n);
     }
 
     template<typename Cond>
-    void addRule(const Cond& cond, Step<Status>* tar) {
+    void addRule(const Cond& cond, Node<Status>* tar) {
         m_gotos.push_back(std::make_pair(cond, tar));
     }
 private:
     std::function<bool(const Status&)> m_fatalCond;
 
-    std::shared_ptr<Step<Status>> m_defaultNext;
+    std::shared_ptr<Node<Status>> m_defaultNext;
 
-    std::vector<std::pair<std::function<bool(const Status&)>, Step<Status>*>> m_gotos;
+    std::vector<std::pair<std::function<bool(const Status&)>, Node<Status>*>> m_gotos;
 };

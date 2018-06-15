@@ -1,5 +1,5 @@
 #pragma once
-#include "step.h"
+#include "node.h"
 
 template<typename Status>
 class EmptyAction : public Action<Status> {

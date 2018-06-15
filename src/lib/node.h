@@ -3,17 +3,17 @@
 #include <rxcpp/rx-observable.hpp>
 
 template<typename Status>
-class Step {
+class Node {
 public:
-    virtual ~Step() {}
+    virtual ~Node() {}
 
     virtual rxcpp::observable<Status> performBy(Principal&) const = 0;
 
-    virtual Step<Status>* getNext(const Status& status) const = 0;
+    virtual Node<Status>* getNext(const Status& status) const = 0;
 };
 
 template<typename Status>
-class Dispatcher : public Step<Status> {
+class Decision : public Node<Status> {
 public:
     rxcpp::observable<Status> performBy(Principal&) const override {
         return rxcpp::observable<>::empty<Status>();
@@ -21,17 +21,17 @@ public:
 };
 
 template<typename Status>
-class Action : public Step<Status> {
+class Action : public Node<Status> {
 public:
 
-    Step<Status>* getNext(const Status& status) const override {
+    Node<Status>* getNext(const Status& status) const override {
         return m_next.get();
     }
 
-    void setNext(std::shared_ptr<Step<Status>> next) {
+    void setNext(std::shared_ptr<Node<Status>> next) {
         m_next = next;
     }
 
 private:
-    std::shared_ptr<Step<Status>> m_next;
+    std::shared_ptr<Node<Status>> m_next;
 };

@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
-#include <step.h>
-#include <empty_action_step.h>
-#include <status_dispatcher.h>
-#include <loop_action_step.h>
-#include <composite_action_step.h>
-#include <direct_dispatcher.h>
+#include <node.h>
+#include <empty_action.h>
+#include <status_decision.h>
+#include <loop_action.h>
+#include <nested_activity_diagram.h>
+#include <direct_decision.h>
 #include <rxcpp/rx.hpp>
 #include <boost/log/trivial.hpp>
 
@@ -52,10 +52,10 @@ TEST(BlueprintTest, CompisiteStep) {
     s1->setNext(s2);
     s2->setNext(s3);
 
-    auto entry = std::make_shared<DirectDispatcher<bool>>();
+    auto entry = std::make_shared<DirectDecision<bool>>();
     entry->setNext(s1);
 
-    CompositeActionStep<bool> step;
+    NestedActivityDiagram<bool> step;
     step.setEntry(entry);
 
     BOOST_LOG_TRIVIAL(debug) << "start performing";
@@ -85,7 +85,7 @@ TEST(BlueprintTest, CompisiteStepWithError) {
     auto s2 = std::make_shared<EmptyAction<int>>(1);
     auto s3 = std::make_shared<EmptyAction<int>>(1);
 
-    auto d2to3 = std::make_shared<StatusDispatcher<int>>();
+    auto d2to3 = std::make_shared<StatusDecision<int>>();
     d2to3->setFatalCondition([](int e) {
         return e == 1;
     });
@@ -94,10 +94,10 @@ TEST(BlueprintTest, CompisiteStepWithError) {
     s2->setNext(d2to3);
     d2to3->setDefaultNext(s3);
 
-    auto entry = std::make_shared<DirectDispatcher<int>>();
+    auto entry = std::make_shared<DirectDecision<int>>();
     entry->setNext(s1);
 
-    CompositeActionStep<int> step;
+    NestedActivityDiagram<int> step;
     step.setEntry(entry);
 
     auto rez = step.performBy(tester);
@@ -130,13 +130,13 @@ TEST(BlueprintTest, LoopStep) {
     s1->setNext(s2);
     s2->setNext(s3);
 
-    auto entry = std::make_shared<DirectDispatcher<int>>();
+    auto entry = std::make_shared<DirectDecision<int>>();
     entry->setNext(s1);
 
-    auto innerStep = std::make_shared<CompositeActionStep<int>>();
+    auto innerStep = std::make_shared<NestedActivityDiagram<int>>();
     innerStep->setEntry(entry);
 
-    LoopActionStep<int> loop;
+    LoopAction<int> loop;
     loop.setInnerAction(innerStep);
     loop.setLoopCount(2);
 
@@ -160,7 +160,7 @@ TEST(BlueprintTest, Goto) {
     auto s2 = std::make_shared<EmptyAction<int>>(1);
     auto s3 = std::make_shared<EmptyAction<int>>(2);
 
-    auto sd = std::make_shared<StatusDispatcher<int>>();
+    auto sd = std::make_shared<StatusDecision<int>>();
     sd->addRule([](int b) {
         return b == 1;
     }, s1.get());
@@ -169,10 +169,10 @@ TEST(BlueprintTest, Goto) {
     s2->setNext(sd);
     sd->setDefaultNext(s3);
 
-    auto entry = std::make_shared<DirectDispatcher<int>>();
+    auto entry = std::make_shared<DirectDecision<int>>();
     entry->setNext(s1);
 
-    CompositeActionStep<int> step;
+    NestedActivityDiagram<int> step;
     step.setEntry(entry);
 
     auto statusSeq = step.performBy(tester);

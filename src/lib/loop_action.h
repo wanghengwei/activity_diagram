@@ -1,9 +1,8 @@
 #pragma once
-#include "step.h"
-// #include "action_step.h"
+#include "node.h"
 
 template<typename Status>
-class LoopActionStep : public Action<Status> {
+class LoopAction : public Action<Status> {
 public:
     rxcpp::observable<Status> performBy(Principal& p) const override {
         if (!m_innerStep) {
