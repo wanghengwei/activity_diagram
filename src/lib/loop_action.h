@@ -4,6 +4,8 @@
 template<typename Status>
 class LoopAction : public Action<Status> {
 public:
+    explicit LoopAction(int64_t n = -1) : m_loopCount{n} {}
+
     rxcpp::observable<Status> performBy(Principal& p) const override {
         if (!m_innerStep) {
             return rxcpp::observable<>::empty<Status>();

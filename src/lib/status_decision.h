@@ -21,7 +21,7 @@ public:
         }
 
         // 如果没有合适的goto，返回默认的下一个节点
-        return m_defaultNext.get();
+        return m_defaultNext;
     }
 
     template<typename Cond>
@@ -29,8 +29,8 @@ public:
         m_fatalCond = cond;
     }
 
-    void setDefaultNext(std::shared_ptr<Node<Status>> n) {
-        m_defaultNext.swap(n);
+    void setDefaultNext(Node<Status>* n) {
+        m_defaultNext = n;
     }
 
     template<typename Cond>
@@ -40,7 +40,7 @@ public:
 private:
     std::function<bool(const Status&)> m_fatalCond;
 
-    std::shared_ptr<Node<Status>> m_defaultNext;
+    Node<Status>* m_defaultNext{};
 
     std::vector<std::pair<std::function<bool(const Status&)>, Node<Status>*>> m_gotos;
 };

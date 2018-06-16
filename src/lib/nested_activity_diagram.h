@@ -8,16 +8,20 @@ class NestedActivityDiagram : public Action<Status> {
 public:
 
     rxcpp::observable<Status> performBy(Principal& p) const override {
-        Node<Status>* entry = getEntry();
+        Node<Status>* entry = getInitial();
         return perform(p, entry, Status{});
     }
 
-    Decision<Status>* getEntry() const {
+    Decision<Status>* getInitial() const {
         return m_entry.get();
     }
 
-    void setEntry(std::shared_ptr<Decision<Status>> entry) {
+    void setInitial(std::shared_ptr<Decision<Status>> entry) {
         m_entry.swap(entry);
+    }
+
+    void add(std::shared_ptr<Node<Status>> child) {
+        m_children.push_back(child);
     }
 
     using Action<Status>::getNext;
@@ -41,4 +45,5 @@ private:
 
 private:
     std::shared_ptr<Decision<Status>> m_entry;
+    std::vector<std::shared_ptr<Node<Status>>> m_children;
 };

@@ -25,13 +25,13 @@ class Action : public Node<Status> {
 public:
 
     Node<Status>* getNext(const Status& status) const override {
-        return m_next.get();
+        return m_next;
     }
 
-    void setNext(std::shared_ptr<Node<Status>> next) {
+    void setNext(Node<Status>* next) {
         m_next = next;
     }
 
 private:
-    std::shared_ptr<Node<Status>> m_next;
+    Node<Status>* m_next{};
 };
