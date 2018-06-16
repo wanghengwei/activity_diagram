@@ -2,6 +2,7 @@
 #include <gmock/gmock.h>
 #include <system_error>
 #include <activity_diagram.h>
+#include <delay_action.h>
 #include <node.h>
 #include <empty_action.h>
 #include <status_decision.h>
@@ -235,12 +236,16 @@ class DummyPlayer : public Principal {};
 //     });
 // }
 
+struct ActivityDiagramTest : ::testing::Test {
+    DummyPlayer player;
+};
+
 // A -> B -> C -> D ->o
 //           ^--------|
 // int C(loop):
 //   C_I_A -> C_I_B
-TEST(ActivityDiagramTest, Complext) {
-    DummyPlayer player;
+TEST_F(ActivityDiagramTest, Complext) {
+    // DummyPlayer player;
 
     auto g = std::make_shared<ActivityDiagram<int>>();
 
@@ -282,4 +287,26 @@ TEST(ActivityDiagramTest, Complext) {
     results.take(12).sequence_equal(expected).as_blocking().subscribe([](bool ok) {
         ASSERT_TRUE(ok);
     });
+}
+
+TEST_F(ActivityDiagramTest, Sleep) {
+    ActivityDiagram<int> g;
+    
+    auto nodeA = std::make_shared<DelayAction<int>>(2);
+
+    g.add(nodeA);
+    g.setFirst(nodeA.get());
+
+    auto results = g.performBy(player);
+    // auto results = rxcpp::observable<>::timer(2s).ignore_elements();
+    auto now = std::chrono::steady_clock::now();
+    BOOST_LOG_TRIVIAL(info) << "before delay";
+    results.is_empty().as_blocking().subscribe([](auto ok) {
+        // BOOST_LOG_TRIVIAL(info) << "item: " << ok;
+        ASSERT_TRUE(ok);
+    });
+    BOOST_LOG_TRIVIAL(info) << "after delay";
+    auto elapsed = std::chrono::steady_clock::now() - now;
+    ASSERT_TRUE(elapsed > 1s && elapsed < 3s);
+    // std::this_thread::sleep_for(5s);
 }
