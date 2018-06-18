@@ -1,6 +1,6 @@
 #pragma once
 #include "principal.h"
-#include <rxcpp/rx-observable.hpp>
+#include <rxcpp/rx.hpp>
 
 template<typename Status>
 class Node {

@@ -11,6 +11,7 @@
 #include <direct_decision.h>
 #include <rxcpp/rx.hpp>
 #include <boost/log/trivial.hpp>
+// #include <rxcpp/schedulers/rx-runloop.hpp>
 
 using namespace std::literals::chrono_literals;
 
@@ -238,6 +239,10 @@ class DummyPlayer : public Principal {};
 
 struct ActivityDiagramTest : ::testing::Test {
     DummyPlayer player;
+
+    void SetUp() {
+        BOOST_LOG_TRIVIAL(debug) << "SetUp";
+    }
 };
 
 // A -> B -> C -> D ->o
@@ -301,12 +306,99 @@ TEST_F(ActivityDiagramTest, Sleep) {
     // auto results = rxcpp::observable<>::timer(2s).ignore_elements();
     auto now = std::chrono::steady_clock::now();
     BOOST_LOG_TRIVIAL(info) << "before delay";
-    results.is_empty().as_blocking().subscribe([](auto ok) {
-        // BOOST_LOG_TRIVIAL(info) << "item: " << ok;
-        ASSERT_TRUE(ok);
+    results.as_blocking().subscribe([](auto ok) {
+        BOOST_LOG_TRIVIAL(info) << "item: " << ok;
+        // ASSERT_TRUE(ok);
+    }, []() {
+        BOOST_LOG_TRIVIAL(info) << "Completed";
     });
     BOOST_LOG_TRIVIAL(info) << "after delay";
     auto elapsed = std::chrono::steady_clock::now() - now;
     ASSERT_TRUE(elapsed > 1s && elapsed < 3s);
     // std::this_thread::sleep_for(5s);
 }
+
+TEST_F(ActivityDiagramTest, EmptyAction) {
+    ActivityDiagram<int> g;
+    
+    auto nodeA = std::make_shared<EmptyAction<int>>(2);
+
+    g.add(nodeA);
+    g.setFirst(nodeA.get());
+
+    auto results = g.performBy(player);
+    // auto results = rxcpp::observable<>::timer(2s).ignore_elements();
+    // auto now = std::chrono::steady_clock::now();
+    // BOOST_LOG_TRIVIAL(info) << "before delay";
+    results.as_blocking().subscribe([](auto ok) {
+        BOOST_LOG_TRIVIAL(info) << "item: " << ok;
+        // ASSERT_TRUE(ok);
+    }, []() {
+        BOOST_LOG_TRIVIAL(info) << "Completed";
+    });
+    // BOOST_LOG_TRIVIAL(info) << "after delay";
+    // auto elapsed = std::chrono::steady_clock::now() - now;
+    // ASSERT_TRUE(elapsed > 1s && elapsed < 3s);
+    // std::this_thread::sleep_for(5s);
+}
+
+// TEST(AAA, aaa) {
+//     using ActionType = observable<int>();
+//     // rxcpp::subjects::behavior<long> actionSubject{0};
+//     auto actionObservable = rxcpp::observable<>::create<ActionType>([](rxcpp::subscriber<ActionType> s) {
+//         s.on_completed();
+//     })
+//     // .subscribe_on(rxcpp::observe_on_event_loop())
+//     .tap([](auto) {
+//         BOOST_LOG_TRIVIAL(debug) << "emmit one";
+//     })
+//     // .replay()
+//     // .publish()
+//     ;
+
+//     auto stateObservable = actionObservable.flat_map([](ActionType act) {
+//         BOOST_LOG_TRIVIAL(debug) << "do action";
+//         // return rxcpp::observable<>::just(act).delay(1s); // as result
+//         return act();
+//     }).publish();
+
+//     stateObservable
+//     .observe_on(rxcpp::observe_on_event_loop())
+//     .subscribe([](long st) {
+//         // add new action into actionObservable
+//         BOOST_LOG_TRIVIAL(debug) << "add new action";
+//         s.on_next(st + 1);
+//         BOOST_LOG_TRIVIAL(debug) << "add new action DONE";
+//     }, []() {
+//         BOOST_LOG_TRIVIAL(debug) << "StateListener completed";
+//     });
+
+//     BOOST_LOG_TRIVIAL(debug) << "connect";
+//     stateObservable.connect_forever();
+
+//     // rxcpp::observable<>::just<long>(1).subscribe(subj.get_subscriber());
+//     // rxcpp::schedulers::run_loop loop;
+
+//     stateObservable
+//     // .observe_on(rxcpp::observe_on_event_loop())
+//     // .tap([](auto) {
+//     //     BOOST_LOG_TRIVIAL(debug) << "original one";
+//     // })
+//     // .concat(src.observe_on(rxcpp::observe_on_event_loop()).take_last(1).tap([](auto) {
+//     //     BOOST_LOG_TRIVIAL(debug) << "take last";
+//     // }))
+//     // s1.get_observable().concat(s2.get_observable())
+//     // .as_blocking()
+//     .subscribe([](auto n) {
+//         BOOST_LOG_TRIVIAL(info) << "get state: " << n;
+//     }, []() {
+//         BOOST_LOG_TRIVIAL(info) << "completed";
+//     });
+
+//     while (true) {
+//     // loop.dispatch();
+
+//         std::this_thread::sleep_for(1s);
+//     }
+//     // src.as_blocking().subscribe();
+// }
