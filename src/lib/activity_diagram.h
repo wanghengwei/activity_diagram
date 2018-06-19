@@ -10,7 +10,7 @@ class ActivityDiagram {
 public:
     ActivityDiagram();
 
-    rxcpp::observable<Status> performBy(Principal& p) const;
+    rxcpp::observable<Status> performBy(Principal& p, rxcpp::schedulers::worker w) const;
 
     void add(std::shared_ptr<Node<Status>> node);
 
@@ -20,8 +20,8 @@ private:
 };
 
 template<typename Status>
-rxcpp::observable<Status> ActivityDiagram<Status>::performBy(Principal& p) const {
-    return m_impl.performBy(p);
+rxcpp::observable<Status> ActivityDiagram<Status>::performBy(Principal& p, rxcpp::schedulers::worker w) const {
+    return m_impl.performBy(p, w);
 }
 
 template<typename Status>

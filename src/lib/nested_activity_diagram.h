@@ -7,19 +7,24 @@ template<typename Status>
 class NestedActivityDiagram : public Action<Status> {
 public:
 
-    rxcpp::observable<Status> performBy(Principal& p) const override {
+    // NestedActivityDiagram(rxcpp::)
+    rxcpp::observable<Status> performBy(Principal& p, rxcpp::schedulers::worker w) const override {
         using ActionAndState = std::pair<Node<Status>*, Status>;
+
+        // static auto worker = rxcpp::schedulers::make_event_loop().create_worker();
 
         auto _s = std::make_shared<rxcpp::subjects::behavior<ActionAndState>>(std::make_pair(getInitial(), Status{}));
 
         auto actionSeq = _s->get_observable();
 
-        return actionSeq.flat_map([&p, _s](auto x) {
-            BOOST_LOG_TRIVIAL(debug) << "flat_map";
-            auto stateSeq = x.first->performBy(p);
-            stateSeq.observe_on(rxcpp::observe_on_event_loop()).take_last(1).default_if_empty(x.second).subscribe([cur = x.first, _s](const Status& ls) {
+        return actionSeq.subscribe_on(rxcpp::serialize_same_worker(w)).flat_map([&p, _s, w](auto x) {
+            // BOOST_LOG_TRIVIAL(debug) << "flat_map";
+            auto stateSeq = x.first->performBy(p, w);
+            stateSeq
+            .observe_on(rxcpp::serialize_same_worker(w))
+            .take_last(1).default_if_empty(x.second).subscribe([cur = x.first, _s](const Status& ls) {
                 auto next = cur->getNext(ls);
-                BOOST_LOG_TRIVIAL(debug) << "getNext: state=" << ls << ", next=" << next;
+                // BOOST_LOG_TRIVIAL(debug) << "getNext: state=" << ls << ", next=" << next;
                 if (next) {
                     _s->get_subscriber().on_next(std::make_pair(next, ls));
                 } else {

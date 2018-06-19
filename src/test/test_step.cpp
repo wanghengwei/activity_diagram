@@ -240,7 +240,10 @@ class DummyPlayer : public Principal {};
 struct ActivityDiagramTest : ::testing::Test {
     DummyPlayer player;
 
+    rxcpp::schedulers::worker worker;
+
     void SetUp() {
+        worker = rxcpp::schedulers::make_new_thread().create_worker();
         BOOST_LOG_TRIVIAL(debug) << "SetUp";
     }
 };
@@ -286,10 +289,12 @@ TEST_F(ActivityDiagramTest, Complext) {
 
     g->setFirst(nodeA.get());
 
-    auto results = g->performBy(player);
+    auto results = g->performBy(player, worker);
     auto expected = rxcpp::observable<>::from(1, 2, 4, 5, 4, 5, 3, 4, 5, 4, 5, 3).as_dynamic();
 
-    results.take(12).sequence_equal(expected).as_blocking().subscribe([](bool ok) {
+    results.take(12).tap([](int x) {
+        BOOST_LOG_TRIVIAL(info) << "state: " << x;
+    }).sequence_equal(expected).as_blocking().subscribe([](bool ok) {
         ASSERT_TRUE(ok);
     });
 }
@@ -302,7 +307,7 @@ TEST_F(ActivityDiagramTest, Sleep) {
     g.add(nodeA);
     g.setFirst(nodeA.get());
 
-    auto results = g.performBy(player);
+    auto results = g.performBy(player, worker);
     // auto results = rxcpp::observable<>::timer(2s).ignore_elements();
     auto now = std::chrono::steady_clock::now();
     BOOST_LOG_TRIVIAL(info) << "before delay";
@@ -319,22 +324,23 @@ TEST_F(ActivityDiagramTest, Sleep) {
 }
 
 TEST_F(ActivityDiagramTest, EmptyAction) {
-    ActivityDiagram<int> g;
+    // ActivityDiagram<int> g;
     
     auto nodeA = std::make_shared<EmptyAction<int>>(2);
 
-    g.add(nodeA);
-    g.setFirst(nodeA.get());
+    // g.add(nodeA);
+    // g.setFirst(nodeA.get());
 
     BOOST_LOG_TRIVIAL(info) << "begin performBy";
-    auto results = g.performBy(player);
+    auto results = nodeA->performBy(player, worker);
     BOOST_LOG_TRIVIAL(info) << "after performBy";
     // auto results = rxcpp::observable<>::timer(2s).ignore_elements();
     // auto now = std::chrono::steady_clock::now();
     // BOOST_LOG_TRIVIAL(info) << "before delay";
-    results.as_blocking().subscribe([](auto ok) {
+    auto expected = rxcpp::observable<>::from(2);
+    results.sequence_equal(expected).as_blocking().subscribe([](bool ok) {
         BOOST_LOG_TRIVIAL(info) << "item: " << ok;
-        // ASSERT_TRUE(ok);
+        ASSERT_TRUE(ok);
     }, []() {
         BOOST_LOG_TRIVIAL(info) << "Completed";
     });
@@ -342,6 +348,47 @@ TEST_F(ActivityDiagramTest, EmptyAction) {
     // auto elapsed = std::chrono::steady_clock::now() - now;
     // ASSERT_TRUE(elapsed > 1s && elapsed < 3s);
     // std::this_thread::sleep_for(5s);
+}
+
+TEST_F(ActivityDiagramTest, Nested) {
+    // DummyPlayer player;
+
+    auto g = std::make_shared<NestedActivityDiagram<int>>();
+
+    auto init = std::make_shared<DirectDecision<int>>();
+    auto nodeA = std::make_shared<EmptyAction<int>>(1);
+    auto nodeB = std::make_shared<EmptyAction<int>>(2);
+    // auto nodeC_I = std::make_shared<NestedActivityDiagram<int>>();
+    auto nodeC = std::make_shared<EmptyAction<int>>(3);
+
+    // auto nodeC_I_I = std::make_shared<DirectDecision<int>>();
+    // auto nodeC_I_A = std::make_shared<EmptyAction<int>>(4);
+    // auto nodeC_I_B = std::make_shared<EmptyAction<int>>(5);
+
+    init->setNext(nodeA.get());
+    nodeA->setNext(nodeB.get());
+    nodeB->setNext(nodeC.get());
+    // nodeC_I->setNext(nodeD.get());
+    // nodeD->setNext(d01.get());
+    // d01->setDefaultNext(nodeC.get());
+
+    // nodeC->setInnerAction(nodeC_I);
+    g->setInitial(init);
+    g->add(nodeA);
+    g->add(nodeB);
+    g->add(nodeC);
+    // g->add(d01);
+
+    // g->setFirst(nodeA.get());
+
+    auto results = g->performBy(player, worker);
+    auto expected = rxcpp::observable<>::from(1, 2, 3).as_dynamic();
+
+    results.tap([](int x) {
+        BOOST_LOG_TRIVIAL(info) << "state: " << x;
+    }).sequence_equal(expected).as_blocking().subscribe([](bool ok) {
+        ASSERT_TRUE(ok);
+    });
 }
 
 TEST(AAA, aaa) {

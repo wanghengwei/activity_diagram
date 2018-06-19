@@ -8,18 +8,16 @@ class DelayAction : public Action<Status> {
 public:
     explicit DelayAction(double sec) : m_delayDuration{sec} {}
 
-    rxcpp::observable<Status> performBy(Principal&) const override {
-        BOOST_LOG_TRIVIAL(debug) << "begin";
+    rxcpp::observable<Status> performBy(Principal&, rxcpp::schedulers::worker w) const override {
+        // BOOST_LOG_TRIVIAL(debug) << "begin";
         auto d = std::chrono::duration_cast<std::chrono::milliseconds>(m_delayDuration);
-        return rxcpp::observable<>::timer(d).map([](int) {
-            BOOST_LOG_TRIVIAL(debug) << "RelayAction.onNext";
-            return Status{};
-        }).ignore_elements();
-        // return rxcpp::observable<>::just<Status>(Status{}).delay(d, rxcpp::observe_on_new_thread()).tap([](auto) {
-        //     BOOST_LOG_TRIVIAL(debug) << "onNext";
+        return rxcpp::observable<>::just<Status>(Status{}).subscribe_on(rxcpp::serialize_same_worker(w)).delay(d)
+        // .tap([](auto) {
+        //     // BOOST_LOG_TRIVIAL(debug) << "onNext";
         // }, []() {
-        //     BOOST_LOG_TRIVIAL(debug) << "onCompleted";
-        // });
+        //     // BOOST_LOG_TRIVIAL(debug) << "onCompleted";
+        // })
+        .publish().connect_forever();
     }
 
 private:

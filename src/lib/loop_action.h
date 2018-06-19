@@ -6,13 +6,13 @@ class LoopAction : public Action<Status> {
 public:
     explicit LoopAction(int64_t n = -1) : m_loopCount{n} {}
 
-    rxcpp::observable<Status> performBy(Principal& p) const override {
+    rxcpp::observable<Status> performBy(Principal& p, rxcpp::schedulers::worker w) const override {
         if (!m_innerStep) {
             return rxcpp::observable<>::empty<Status>();
         }
 
-        return rxcpp::observable<>::just(m_innerStep.get()).repeat(m_loopCount).flat_map([&p](Action<Status>* step) {
-            return step->performBy(p);
+        return rxcpp::observable<>::just(m_innerStep.get()).repeat(m_loopCount).flat_map([&p, w](Action<Status>* step) {
+            return step->performBy(p, w);
         });
     }
 
