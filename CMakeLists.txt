@@ -11,10 +11,10 @@ if(${USE_OFFICIAL_DOWNLOADS})
     set(FRUIT_URL https://github.com/google/fruit/archive/v3.1.1.zip)
     set(GOOGLETEST_URL https://github.com/google/googletest/archive/release-1.8.0.zip)
 else()
-    set(RXCPP_URL http://downloads.tac.com/dev/libs/RxCpp/4.1.0.zip)
-    set(FMTLIB_URL http://downloads.tac.com/dev/libs/fmt/fmt-5.0.0.zip)
-    set(FRUIT_URL http://downloads.tac.com/dev/libs/fruit/v3.1.1.zip)
-    set(GOOGLETEST_URL http://downloads.tac.com/dev/libs/googletest/release-1.8.0.zip)
+    set(RXCPP_URL http://dl.tac.com/dev/libs/RxCpp/4.1.0.zip)
+    set(FMTLIB_URL http://dl.tac.com/dev/libs/fmt/fmt-5.0.0.zip)
+    set(FRUIT_URL http://dl.tac.com/dev/libs/fruit/v3.1.1.zip)
+    set(GOOGLETEST_URL http://dl.tac.com/dev/libs/googletest/release-1.8.0.zip)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -26,8 +26,11 @@ endif()
 include(FetchContent)
 include(ExternalProject)
 
-find_package(Boost COMPONENTS log)
+find_package(Boost 1.66 REQUIRED COMPONENTS log)
 include_directories(${Boost_INCLUDE_DIR})
+# if(NOT ${Boost_USE_STATIC_LIBS})
+#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_ALL_DYN_LINK")
+# endif()
 
 FetchContent_Declare(rxcpp
     URL ${RXCPP_URL}

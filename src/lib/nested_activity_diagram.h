@@ -8,59 +8,26 @@ class NestedActivityDiagram : public Action<Status> {
 public:
 
     rxcpp::observable<Status> performBy(Principal& p) const override {
-        Node<Status>* entry = getInitial();
+        using ActionAndState = std::pair<Node<Status>*, Status>;
 
-        using NodeWithDefaultState = std::pair<Node<Status>*, Status>;
-        
-        auto subject = std::make_shared<rxcpp::subjects::subject<NodeWithDefaultState>>();
+        auto _s = std::make_shared<rxcpp::subjects::behavior<ActionAndState>>(std::make_pair(getInitial(), Status{}));
 
-        auto actionObservable = subject->get_observable();
+        auto actionSeq = _s->get_observable();
 
-        // seq<(node, seq<state>, lastState)>
-        auto o1 = actionObservable.map([&p](Node<Status>* n) {
-            auto stSeq = n->performBy(p).publish();
-            stSeq.connect_forever();
-            return std::make_tuple(n, stSeq.as_dynamic(), Status{});
-        }).publish();
-
-        // seq<(node, state)>
-        o1
-        .observe_on(rxcpp::observe_on_event_loop())
-        // .subscribe_on(rxcpp::observe_on_event_loop())
-        .flat_map([](auto x) {
-            Node<Status>* cur = std::get<0>(x);
-            Status lastState = std::get<2>(x);
-            return std::get<1>(x).take_last(1).default_if_empty(lastState).map([cur](const Status& st) {
-                return std::make_pair(cur, st);
+        return actionSeq.flat_map([&p, _s](auto x) {
+            BOOST_LOG_TRIVIAL(debug) << "flat_map";
+            auto stateSeq = x.first->performBy(p);
+            stateSeq.observe_on(rxcpp::observe_on_event_loop()).take_last(1).default_if_empty(x.second).subscribe([cur = x.first, _s](const Status& ls) {
+                auto next = cur->getNext(ls);
+                BOOST_LOG_TRIVIAL(debug) << "getNext: state=" << ls << ", next=" << next;
+                if (next) {
+                    _s->get_subscriber().on_next(std::make_pair(next, ls));
+                } else {
+                    _s->get_subscriber().on_completed();
+                }
             });
-        })
-        .subscribe([subject](auto pr) {
-            Node<Status>* next = pr.first->getNext(pr.second);
-            if (next) {
-                BOOST_LOG_TRIVIAL(debug) << "add an new action";
-                subject->get_subscriber().on_next(next);
-            } else {
-                BOOST_LOG_TRIVIAL(debug) << "no more actions, completed";
-                subject->get_subscriber().on_completed();
-            }
-        })
-        ;
-
-        // seq<state>
-        auto ret = o1
-        .flat_map([](auto o) {
-            return std::get<1>(o).tap([](auto) {
-                BOOST_LOG_TRIVIAL(debug) << "22222";
-            });
-            // .map([](const auto& pr) {
-            //     return std::get<1>(pr);
-            // })
-            ;
+            return stateSeq;
         });
-
-        o1.connect_forever();
-        subject->get_subscriber().on_next(entry);
-        return ret;
     }
 
     Decision<Status>* getInitial() const {

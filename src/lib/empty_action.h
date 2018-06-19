@@ -8,8 +8,8 @@ public:
 
     rxcpp::observable<Status> performBy(Principal&) const override {
         BOOST_LOG_TRIVIAL(debug) << "EmptyAction.performBy";
-        auto r = rxcpp::observable<>::just<Status>(m_status).tap([](auto) {
-            BOOST_LOG_TRIVIAL(debug) << "EmptyAction.onNext";
+        auto r = rxcpp::observable<>::just<Status>(m_status).tap([this](const Status& st) {
+            BOOST_LOG_TRIVIAL(debug) << "EmptyAction.onNext: this=" << this << ", state=" << st;
         });
         // r.connect();
         return r;
