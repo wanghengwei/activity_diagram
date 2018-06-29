@@ -8,4 +8,4 @@ add_library(activity_diagram
     )
 target_include_directories(activity_diagram PUBLIC ${rxcpp_SOURCE_DIR}/Rx/v2/src INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(activity_diagram ${Boost_LIBRARIES})
-# target_compile_definitions(activity_diagram PUBLIC BOOST_ALL_DYN_LINK)
+target_compile_definitions(activity_diagram PUBLIC BOOST_ALL_DYN_LINK)
